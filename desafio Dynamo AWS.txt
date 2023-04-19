@@ -1,0 +1,51 @@
+CreateTableRequest createTableRequest = new CreateTableRequest()
+    .withTableName("livros")
+    .withAttributeDefinitions(new AttributeDefinition("id", ScalarAttributeType.N),
+                              new AttributeDefinition("titulo", ScalarAttributeType.S),
+                              new AttributeDefinition("autor", ScalarAttributeType.S))
+    .withKeySchema(new KeySchemaElement("id", KeyType.HASH))
+    .withGlobalSecondaryIndexes(new GlobalSecondaryIndex()
+                                      .withIndexName("titulo-autor-index")
+                                      .withKeySchema(new KeySchemaElement("titulo", KeyType.HASH),
+                                                     new KeySchemaElement("autor", KeyType.RANGE))
+                                      .withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+                                      .withProvisionedThroughput(new ProvisionedThroughput(5L, 5L)))
+    .withProvisionedThroughput(new ProvisionedThroughput(5L, 5L));
+Nesse exemplo, a tabela tem um atributo "id" como chave primária (HASH) e um índice global secundário "titulo-autor-index" com as chaves "titulo" (HASH) e "autor" (RANGE).
+
+Executar o comando createTable para criar a tabela no Amazon DynamoDB:
+
+client.createTable(createTableRequest);
+Para inserir um item na tabela, crie um objeto PutItemRequest com os valores dos atributos:
+
+PutItemRequest putItemRequest = new PutItemRequest()
+    .withTableName("livros")
+    .withItem(new HashMap<String, AttributeValue>() {{
+        put("id", new AttributeValue().withN("1"));
+        put("titulo", new AttributeValue("O Senhor dos Anéis"));
+        put("autor", new AttributeValue("J.R.R. Tolkien"));
+    }});
+client.putItem(putItemRequest);
+Para inserir múltiplos itens de uma vez, use o comando batchWriteItem:
+
+List<WriteRequest> writeRequests = new ArrayList<>();
+writeRequests.add(new WriteRequest(new PutRequest()
+    .withItem(new HashMap<String, AttributeValue>() {{
+        put("id", new AttributeValue().withN("2"));
+        put("titulo", new AttributeValue("Harry Potter e a Pedra Filosofal"));
+        put("autor", new AttributeValue("J.K. Rowling"));
+    }})));
+writeRequests.add(new WriteRequest(new PutRequest()
+    .withItem(new HashMap<String, AttributeValue>() {{
+        put("id", new AttributeValue().withN("3"));
+        put("titulo", new AttributeValue("Game of Thrones"));
+        put("autor", new AttributeValue("George R.R. Martin"));
+    }})));
+
+Map<String, List<WriteRequest>> requestItems = new HashMap<>();
+requestItems.put("livros", writeRequests);
+
+BatchWriteItemRequest batchWriteItemRequest = new BatchWriteItemRequest()
+    .withRequestItems(requestItems);
+
+client.batchWriteItem(batchWriteItemRequest);
